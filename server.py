@@ -37,7 +37,7 @@ end_date = str(year) + "-" + str(month+1) + "-" + str(day)
 class Consultants(Resource):
     def get(self):
         #return {'consultants': [consultant for consultant in consultants]}
-        return dumps(consultants)
+        return jsonify(consultants)
 
 class Bugs(Resource):
     def get(self):
