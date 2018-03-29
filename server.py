@@ -7,6 +7,8 @@ from flask.ext.jsonpify import jsonify
 import bugzilla
 import sys
 import datetime
+import calendar
+from time import strptime
 
 app = Flask(__name__)
 api = Api(app)
@@ -28,11 +30,31 @@ consultants = reporters
 now = datetime.datetime.now()
 year = now.year
 month = now.month
-day = 1
+first_day = 1
+last_day = calendar.monthrange(year, month)[1]
+date = str(year) + "-" + str(month) + "-" + str(first_day)
+end_date = str(year) + "-" + str(month) + "-" + str(last_day)
 
-date = str(year) + "-" + str(month) + "-" + str(day)
-end_date = str(year) + "-" + str(month+1) + "-" + str(day)
+class InvalidUsage(Exception):
+    status_code = 400
 
+    def __init__(self, message, status_code=None, payload=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.payload = payload
+
+    def to_dict(self):
+        rv = dict(self.payload or ())
+        rv['message'] = self.message
+        return rv
+
+@app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
 
 class Consultants(Resource):
     def get(self):
@@ -63,14 +85,32 @@ def consultant_query_by_date(alias, date, end_date):
 
 api.add_resource(Consultants, '/consultants')
 api.add_resource(Bugs, '/bugs')
-@app.route('/bugs/<consultant>')
+
+@app.route('/bugs/consultants/<consultant>')
 def list_bugs_for_consultant(consultant):
         bug_list = {} 
         result = consultant_query_by_date(consultant, date, end_date)
-        print(result)
         bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
         return jsonify(bug_list[consultant])
 
+@app.route('/bugs/month/<month>')
+def list_bugs_for_month(month):
+        # convert the month into number    
+	try:
+	        month = month[:3]
+        	month = strptime(month,'%b').tm_mon
+	except:
+		raise InvalidUsage("Not a valid month. Try the format jan, feb, mar, apr, jun, jul, aug, sep, oct, nov, dec", status_code=400)
+        
+	last_day = calendar.monthrange(year, month)[1]
+	date = str(year) + "-" + str(month) + "-" + str(first_day)
+	end_date = str(year) + "-" + str(month) + "-" + str(last_day)
+
+        bug_list = {} 
+        for consultant in consultants:
+            result = consultant_query_by_date(consultant, date, end_date)
+            bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
+        return jsonify(bug_list)
 
 if __name__ == '__main__':
     app.run(port=5002)
