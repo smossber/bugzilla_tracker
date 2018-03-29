@@ -76,7 +76,7 @@ def consultant_query_by_date(alias, date, end_date):
     print(date)
     print(end_date)
     
-    query_url = ("https://bugzilla.redhat.com/buglist.cgi?email1={}&emailreporter1=1&emailtype1=substring&f1=creation_ts&f2=creation_ts&list_id=8596295&o1=greaterthan&o2=lessthan&query_format=advanced&v1={}&v2={}".format(alias,date, end_date))
+    query_url = ("https://bugzilla.redhat.com/buglist.cgi?email1={}&emailreporter1=1&emailtype1=substring&f1=creation_ts&f2=creation_ts&list_id=8596295&o1=greaterthaneq&o2=lessthaneq&query_format=advanced&v1={}&v2={}".format(alias,date, end_date))
     
     query = bz.url_to_query(query_url)
     bugs = bz.query(query)
