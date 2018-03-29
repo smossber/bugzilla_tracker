@@ -3,6 +3,8 @@ from flask import Flask, request
 from flask_restful import Resource, Api
 from sqlalchemy import create_engine
 from flask.ext.jsonpify import jsonify
+#from flask.ext.cache import Cache
+from werkzeug.contrib.cache import SimpleCache
 
 import bugzilla
 import sys
@@ -10,7 +12,10 @@ import datetime
 import calendar
 from time import strptime
 
+
 app = Flask(__name__)
+#app.cache = Cache(app,config={'CACHE_TYPE': 'filesystem', 'CACHE_DIR': '/tmp'})
+cache = SimpleCache()
 api = Api(app)
 
 URL = "bugzilla.redhat.com"
@@ -75,7 +80,6 @@ def consultant_query_by_date(alias, date, end_date):
     print(alias)
     print(date)
     print(end_date)
-    
     query_url = ("https://bugzilla.redhat.com/buglist.cgi?email1={}&emailreporter1=1&emailtype1=substring&f1=creation_ts&f2=creation_ts&list_id=8596295&o1=greaterthaneq&o2=lessthaneq&query_format=advanced&v1={}&v2={}".format(alias,date, end_date))
     
     query = bz.url_to_query(query_url)
@@ -93,6 +97,7 @@ def list_bugs_for_consultant(consultant):
         bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
         return jsonify(bug_list[consultant])
 
+#@app.cache.memoize(timeout=50)
 @app.route('/bugs/month/<month>')
 def list_bugs_for_month(month):
         # convert the month into number    
@@ -106,10 +111,14 @@ def list_bugs_for_month(month):
 	date = str(year) + "-" + str(month) + "-" + str(first_day)
 	end_date = str(year) + "-" + str(month) + "-" + str(last_day)
 
-        bug_list = {} 
-        for consultant in consultants:
-            result = consultant_query_by_date(consultant, date, end_date)
-            bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
+        cache_name = month
+        bug_list = cache.get(cache_name)
+        if bug_list is None: 
+            bug_list = {} 
+            for consultant in consultants:
+                result = consultant_query_by_date(consultant, date, end_date)
+                bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
+            cache.set(cache_name, bug_list, timeout= 5* 60)
         return jsonify(bug_list)
 
 if __name__ == '__main__':
