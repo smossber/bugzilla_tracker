@@ -3,7 +3,6 @@ from flask import Flask, request
 from flask_restful import Resource, Api
 from sqlalchemy import create_engine
 from flask.ext.jsonpify import jsonify
-#from flask.ext.cache import Cache
 from werkzeug.contrib.cache import SimpleCache
 
 import bugzilla
@@ -122,4 +121,4 @@ def list_bugs_for_month(month):
         return jsonify(bug_list)
 
 if __name__ == '__main__':
-    app.run(port=5002)
+    app.run(host='0.0.0.0',port=5002)
