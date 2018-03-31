@@ -65,14 +65,14 @@ class Consultants(Resource):
         #return {'consultants': [consultant for consultant in consultants]}
         return jsonify(consultants)
 
-class Bugs(Resource):
-    def get(self):
-        bug_list = {} 
-        for consultant in consultants:
-            # pick bug_id and summary from the bug object in the query
-            result = consultant_query_by_date(consultant, date, end_date)
-            bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
-        return bug_list
+#class Bugs(Resource):
+#    def get(self):
+#        bug_list = {} 
+#        for consultant in consultants:
+#            # pick bug_id and summary from the bug object in the query
+#            result = consultant_query_by_date(consultant, date, end_date)
+#            bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
+#        return bug_list
 
 
 def consultant_query_by_date(alias, date, end_date):
@@ -87,24 +87,27 @@ def consultant_query_by_date(alias, date, end_date):
     
 
 api.add_resource(Consultants, '/consultants')
-api.add_resource(Bugs, '/bugs')
+#api.add_resource(Bugs, '/bugs')
 
 @app.route('/bugs/consultants/<consultant>')
 def list_bugs_for_consultant(consultant):
         bug_list = {} 
         result = consultant_query_by_date(consultant, date, end_date)
-        bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
+#        bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
         return jsonify(bug_list[consultant])
 
 #@app.cache.memoize(timeout=50)
-@app.route('/bugs/month/<month>')
-def list_bugs_for_month(month):
+@app.route('/bugs')
+def list_bugs_for_month():
         # convert the month into number    
-	try:
-	        month = month[:3]
-        	month = strptime(month,'%b').tm_mon
-	except:
-		raise InvalidUsage("Not a valid month. Try the format jan, feb, mar, apr, jun, jul, aug, sep, oct, nov, dec", status_code=400)
+        month = request.args.get('month')
+        if month:
+        	try:
+	            month = month[:3]
+                    month = strptime(month,'%b').tm_mon
+	        except:
+                    print("did we end up?")
+		    raise InvalidUsage("Not a valid month. Try the format jan, feb, mar, apr, jun, jul, aug, sep, oct, nov, dec", status_code=400)
         
 	last_day = calendar.monthrange(year, month)[1]
 	date = str(year) + "-" + str(month) + "-" + str(first_day)
