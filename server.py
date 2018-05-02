@@ -30,6 +30,7 @@ except IOError:
 f.close()
 consultants = reporters
 
+
 # Default is to show the current month
 now = datetime.datetime.now()
 year = now.year
@@ -89,39 +90,54 @@ def consultant_query_by_date(alias, date, end_date):
 api.add_resource(Consultants, '/consultants')
 #api.add_resource(Bugs, '/bugs')
 
-@app.route('/bugs/consultants/<consultant>')
-def list_bugs_for_consultant(consultant):
-        bug_list = {} 
-        result = consultant_query_by_date(consultant, date, end_date)
-#        bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
-        return jsonify(bug_list[consultant])
 
 #@app.cache.memoize(timeout=50)
 @app.route('/bugs')
-def list_bugs_for_month():
-        # convert the month into number    
-        month = request.args.get('month')
-        if month:
-        	try:
-	            month = month[:3]
-                    month = strptime(month,'%b').tm_mon
-	        except:
-                    print("did we end up?")
-		    raise InvalidUsage("Not a valid month. Try the format jan, feb, mar, apr, jun, jul, aug, sep, oct, nov, dec", status_code=400)
-        
-	last_day = calendar.monthrange(year, month)[1]
-	date = str(year) + "-" + str(month) + "-" + str(first_day)
-	end_date = str(year) + "-" + str(month) + "-" + str(last_day)
+def list_bugs_for_month(consultant = None):
+    # If consultant is passed, override consultants list to only contain one
+    if request.args.get('consultant'):
+        print "got a consultant specified"
+        print ""
+        try: 
+            consultant = request.args.get('consultant')
+        except Exception:
+            raise InvalidUsage("Invalid consultant", status_code=400)
+    
 
-        cache_name = month
-        bug_list = cache.get(cache_name)
-        if bug_list is None: 
-            bug_list = {} 
+    # convert the month into number    
+    if request.args.get('month'):
+        try:
+            global month
+            month = request.args.get('month')
+            month = month[:3]
+            month = strptime(month,'%b').tm_mon
+        except:
+            raise InvalidUsage("Not a valid month. Try the format jan, feb, mar, apr, jun, jul, aug, sep, oct, nov, dec", status_code=400)
+    
+    last_day = calendar.monthrange(year, month)[1]
+    date = str(year) + "-" + str(month) + "-" + str(first_day)
+    end_date = str(year) + "-" + str(month) + "-" + str(last_day)
+
+    if consultant: 
+        cache_name = str(month) + consultant
+    else:
+        cache_name = str(month)
+
+#    bug_list = cache.get(cache_name)
+    bug_list = None
+    if bug_list is None: 
+        bug_list = {} 
+        if consultant is None:
             for consultant in consultants:
                 result = consultant_query_by_date(consultant, date, end_date)
                 bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
-            cache.set(cache_name, bug_list, timeout= 5* 60)
-        return jsonify(bug_list)
+                cache.set(cache_name, bug_list, timeout= 5* 60)
+        else:
+                result = consultant_query_by_date(consultant, date, end_date)
+                bug_list[consultant] = {'bugs':[{'id': bug.id, 'topic': bug.summary} for bug in result], 'count': len(result)}
+                cache.set(cache_name, bug_list, timeout= 5* 60)
+
+    return jsonify(bug_list)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port=5002)
