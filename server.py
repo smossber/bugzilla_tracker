@@ -118,13 +118,13 @@ def list_bugs_for_month(consultant = None):
     date = str(year) + "-" + str(month) + "-" + str(first_day)
     end_date = str(year) + "-" + str(month) + "-" + str(last_day)
 
-    if consultant: 
+    if consultant is not None: 
         cache_name = str(month) + consultant
     else:
         cache_name = str(month)
-
-#    bug_list = cache.get(cache_name)
-    bug_list = None
+    
+    print "Cache name %s" % cache_name
+    bug_list = cache.get(cache_name)
     if bug_list is None: 
         bug_list = {} 
         if consultant is None:
